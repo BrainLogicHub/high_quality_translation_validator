@@ -1,9 +1,4 @@
-import re
-import string
-from typing import Any, Callable, Dict, Optional
-
-import rstr
-
+from typing import Any, Dict, cast, Optional, Callable
 from guardrails.validator_base import (
     FailResult,
     PassResult,
@@ -12,60 +7,95 @@ from guardrails.validator_base import (
     register_validator,
 )
 
+try:
+    from comet import download_model, load_from_checkpoint
+except ImportError:
+    download_model = None
+    load_from_checkpoint = None
 
-@register_validator(name="guardrails/regex_match", data_type="string")
-class RegexMatch(Validator):
-    """Validates that a value matches a regular expression.
+
+@register_validator(name="guardrails/high_quality_translation", data_type="string")
+class HighQualityTranslation(Validator):
+    """Validates that the translation is of high quality.
 
     **Key Properties**
 
     | Property                      | Description                       |
     | ----------------------------- | --------------------------------- |
-    | Name for `format` attribute   | `regex_match`                     |
+    | Name for `format` attribute   | `is-high-quality-translation`     |
     | Supported data types          | `string`                          |
-    | Programmatic fix              | Generate a string that matches the regular expression |
+    | Programmatic fix              | None                              |
 
-    Args:
-        regex: Str regex pattern
-        match_type: Str in {"search", "fullmatch"} for a regex search or full-match option
-    """  # noqa
+    Other parameters: Metadata
+        translation_source (str): The source of the translation.
+
+    This validator uses one of the reference-free models from Unbabel/COMET
+    to check the quality of the translation. Specifically, it uses the
+    `Unbabel/wmt22-cometkiwi-da` model.
+
+    Unbabel/COMET details: https://github.com/Unbabel/COMET
+    Model details: https://huggingface.co/Unbabel/wmt22-cometkiwi-da
+
+    Pre-requisites:
+        - Install the `unbabel-comet` from source:
+            `pip install git+https://github.com/Unbabel/COMET`
+        - Please accept the model license from:
+            https://huggingface.co/Unbabel/wmt22-cometkiwi-da
+        - Login into Huggingface Hub using:
+            huggingface-cli login --token $HUGGINGFACE_TOKEN
+    """
 
     def __init__(
         self,
-        regex: str,
-        match_type: Optional[str] = None,
+        threshold: float = 0.75,
         on_fail: Optional[Callable] = None,
+        **kwargs,
     ):
-        # todo -> something forces this to be passed as kwargs and therefore xml-ized.
-        # match_types = ["fullmatch", "search"]
+        super().__init__(on_fail, threshold=threshold, **kwargs)
+        if download_model is None or load_from_checkpoint is None:
+            raise RuntimeError(
+                "is-high-quality-translation validator requires "
+                "unbabel-comet to be installed. Please install it using "
+                "`pip install git+https://github.com/Unbabel/COMET`."
+            )
+        self._model_name = "Unbabel/wmt22-cometkiwi-da"
+        self._quality_threshold = threshold
 
-        if match_type is None:
-            match_type = "fullmatch"
-        assert match_type in [
-            "fullmatch",
-            "search",
-        ], 'match_type must be in ["fullmatch", "search"]'
+        try:
+            # Download the model
+            print("\nDownloading the model. This may take a while the 1st time...")
+            model_path = download_model(self._model_name)
 
-        super().__init__(on_fail=on_fail, match_type=match_type, regex=regex)
-        self._regex = regex
-        self._match_type = match_type
+            # Load the model
+            print("\nLoading the model from checkpoint...")
+            self.model = load_from_checkpoint(model_path)
+        except Exception as e:
+            raise RuntimeError(
+                f"Error while downloading the model {self._model_name} "
+                "from COMET: {e}.\n Please review the validator "
+                "documentation for more details on the pre-requisites."
+                "Ensure that you are logged into Huggingface Hub."
+            ) from e
 
     def validate(self, value: Any, metadata: Dict) -> ValidationResult:
-        p = re.compile(self._regex)
-        """Validates that value matches the provided regular expression."""
-        # Pad matching string on either side for fix
-        # example if we are performing a regex search
-        str_padding = (
-            "" if self._match_type == "fullmatch" else rstr.rstr(string.ascii_lowercase)
-        )
-        self._fix_str = str_padding + rstr.xeger(self._regex) + str_padding
+        """Validates that the translation is of high quality."""
+        if "translation_source" not in metadata:
+            raise RuntimeError(
+                "is-high-quality-translation validator expects "
+                "`translation_source` key in metadata"
+            )
 
-        if not getattr(p, self._match_type)(value):
+        model_output = self.model.predict(
+            [{"src": metadata["translation_source"], "mt": value}],
+            accelerator="cpu",
+        )
+        model_output = cast(Any, model_output)
+        translation_quality = model_output.scores[0]
+        print(f"Translation quality: {translation_quality}")
+        if translation_quality < self._quality_threshold:
             return FailResult(
-                error_message=f"Result must match {self._regex}",
-                fix_value=self._fix_str,
+                error_message=f"{value} is a low quality translation. "
+                "Hence, not returning.",
+                fix_value="",
             )
         return PassResult()
-
-    def to_prompt(self, with_keywords: bool = True) -> str:
-        return "results should match " + self._regex

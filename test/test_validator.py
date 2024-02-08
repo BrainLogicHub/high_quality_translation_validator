@@ -1,21 +1,76 @@
-# to run these, run 
-# pytest test/test-validator.py
-
 from guardrails import Guard
-from validator import RegexMatch
+from pydantic import BaseModel, Field
+from validator import HighQualityTranslation
+import pytest
 
-# We use 'refrain' as the validator's fail action,
-#  so we expect failures to always result in a guarded output of None
-# Learn more about corrective actions here:
-#  https://www.guardrailsai.com/docs/concepts/output/#%EF%B8%8F-specifying-corrective-actions
-guard = Guard.from_string(validators=[RegexMatch(regex="a.*", match_type="fullmatch", on_fail="refrain")])
 
-def test_pass():
-  test_output = "a test value"
-  raw_output, guarded_output, *rest = guard.parse(test_output)
-  assert(guarded_output is test_output)
+# Create a pydantic model with a field that uses the custom validator
+class ValidatorTestObject(BaseModel):
+    text: str = Field(validators=[HighQualityTranslation(on_fail="exception")])
 
-def test_fail():
-  test_output = "b test value"
-  raw_output, guarded_output, *rest = guard.parse(test_output)
-  assert(guarded_output is None)
+
+# Test happy path
+@pytest.mark.parametrize(
+    "value, metadata",
+    [
+        (
+            """
+            {
+                "text": "Ich komme aus Bonn, Deutschland und ich bin 25 Jahre alt. Ich habe ein Hund."
+            }
+            """,
+            {
+                "translation_source": "I am from Bonn, Germany and I am 25 years old. I have a dog."
+            },
+        ),
+        (
+            """
+            {
+                "text": "The cat slept soundly under the warm afternoon sun, oblivious to the hustle and bustle of the city. Meanwhile, the leaves of the trees danced to the rhythm of the wind, painting a picture of peace and serenity."
+            }
+            """,
+            {
+                "translation_source": "El gato dormía plácidamente bajo el cálido sol de la tarde, ajeno al bullicio de la ciudad. Mientras tanto, las hojas de los árboles danzaban al ritmo del viento, pintando un cuadro de paz y serenidad."
+            },
+        ),
+    ],
+)
+def test_happy_path(value, metadata):
+    # Create a guard from the pydantic model
+    guard = Guard.from_pydantic(output_class=ValidatorTestObject)
+    response = guard.parse(value, metadata=metadata)
+    print("Happy path response", response)
+    assert response.validation_passed is True
+
+
+# Test fail path
+@pytest.mark.parametrize(
+    "value, metadata",
+    [
+        (
+            """
+            {
+                "text": "Ich komme aus Bonn, Deutschland und ich bin 25 Jahre alt. Ich habe ein Hund."
+            }
+            """,
+            {"translation_source": "I is Bonn but was 25 years. You is dog."},
+        ),
+        (
+            """
+            {
+                "text": "Dog is sleeping under sun."
+            }
+            """,
+            {
+                "translation_source": "El gato dormía plácidamente bajo el cálido sol de la tarde, ajeno al bullicio de la ciudad. Mientras tanto, las hojas de los árboles danzaban al ritmo del viento, pintando un cuadro de paz y serenidad."
+            },
+        ),
+    ],
+)
+def test_fail_path(value, metadata):
+    # Create a guard from the pydantic model
+    guard = Guard.from_pydantic(output_class=ValidatorTestObject)
+
+    with pytest.raises(Exception):
+        response = guard.parse(value, metadata=metadata)
+        print("Fail path response", response)
