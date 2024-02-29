@@ -33,8 +33,6 @@ class HighQualityTranslation(Validator):
     Model details: https://huggingface.co/Unbabel/wmt22-cometkiwi-da
 
     Pre-requisites:
-        - Install the `unbabel-comet` package:
-            `pip install unbabel-comet`
         - Please accept the gated model license from:
             https://huggingface.co/Unbabel/wmt22-cometkiwi-da
         - Get your Huggingface token from:

@@ -15,8 +15,6 @@ This validator evaluates whether a translation is of high quality. It is useful 
 ## Requirements
 * Dependencies: `unbabel-comet`
 * **IMPORTANT**: Steps to follow ***before** installing the validator*:
-    - Install the `unbabel-comet` package:
-        `pip install unbabel-comet`
     - Please accept the gated model license from:
         https://huggingface.co/Unbabel/wmt22-cometkiwi-da
     - Get your Huggingface token from:
