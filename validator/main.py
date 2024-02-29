@@ -7,24 +7,20 @@ from guardrails.validator_base import (
     register_validator,
 )
 
-try:
-    from comet import download_model, load_from_checkpoint
-except ImportError:
-    download_model = None
-    load_from_checkpoint = None
+from comet import download_model, load_from_checkpoint
 
 
-@register_validator(name="guardrails/high_quality_translation", data_type="string")
+@register_validator(name="brainlogic/high_quality_translation", data_type="string")
 class HighQualityTranslation(Validator):
     """Validates that the translation is of high quality.
 
     **Key Properties**
 
-    | Property                      | Description                       |
-    | ----------------------------- | --------------------------------- |
-    | Name for `format` attribute   | `is-high-quality-translation`     |
-    | Supported data types          | `string`                          |
-    | Programmatic fix              | None                              |
+    | Property                      | Description                               |
+    | ----------------------------- | ----------------------------------------- |
+    | Name for `format` attribute   | `brainlogic/high_quality_translation`     |
+    | Supported data types          | `string`                                  |
+    | Programmatic fix              | None                                      |
 
     Other parameters: Metadata
         translation_source (str): The source of the translation.
@@ -37,12 +33,17 @@ class HighQualityTranslation(Validator):
     Model details: https://huggingface.co/Unbabel/wmt22-cometkiwi-da
 
     Pre-requisites:
-        - Install the `unbabel-comet` from source:
-            `pip install git+https://github.com/Unbabel/COMET`
-        - Please accept the model license from:
+        - Install the `unbabel-comet` package:
+            `pip install unbabel-comet`
+        - Please accept the gated model license from:
             https://huggingface.co/Unbabel/wmt22-cometkiwi-da
-        - Login into Huggingface Hub using:
-            huggingface-cli login --token $HUGGINGFACE_TOKEN
+        - Get your Huggingface token from:
+            https://huggingface.co/settings/tokens
+            (Either create a new token or use an existing one)
+        - Download Huggingface CLI:
+            `pip install -U "huggingface_hub[cli]"`
+        - Login into Huggingface Hub using the token:
+            `huggingface-cli login --token $HUGGINGFACE_TOKEN`
     """
 
     def __init__(
@@ -52,22 +53,13 @@ class HighQualityTranslation(Validator):
         **kwargs,
     ):
         super().__init__(on_fail, threshold=threshold, **kwargs)
-        if download_model is None or load_from_checkpoint is None:
-            raise RuntimeError(
-                "is-high-quality-translation validator requires "
-                "unbabel-comet to be installed. Please install it using "
-                "`pip install git+https://github.com/Unbabel/COMET`."
-            )
         self._model_name = "Unbabel/wmt22-cometkiwi-da"
         self._quality_threshold = threshold
 
         try:
-            # Download the model
-            print("\nDownloading the model. This may take a while the 1st time...")
+            # Download and load the model
+            print(f"Loading the model {self._model_name}...")
             model_path = download_model(self._model_name)
-
-            # Load the model
-            print("\nLoading the model from checkpoint...")
             self.model = load_from_checkpoint(model_path)
         except Exception as e:
             raise RuntimeError(
@@ -78,12 +70,10 @@ class HighQualityTranslation(Validator):
             ) from e
 
     def validate(self, value: Any, metadata: Dict) -> ValidationResult:
-        """Validates that the translation is of high quality."""
+        """Validation method of the validator."""
+
         if "translation_source" not in metadata:
-            raise RuntimeError(
-                "is-high-quality-translation validator expects "
-                "`translation_source` key in metadata"
-            )
+            raise RuntimeError("The validator expects `translation_source` in metadata")
 
         model_output = self.model.predict(
             [{"src": metadata["translation_source"], "mt": value}],
@@ -91,11 +81,9 @@ class HighQualityTranslation(Validator):
         )
         model_output = cast(Any, model_output)
         translation_quality = model_output.scores[0]
-        print(f"Translation quality: {translation_quality}")
         if translation_quality < self._quality_threshold:
             return FailResult(
-                error_message=f"{value} is a low quality translation. "
-                "Hence, not returning.",
+                error_message=f"{value} is a low quality translation. ",
                 fix_value="",
             )
         return PassResult()

@@ -1,16 +1,16 @@
 [project]
-name = "high-quality-translation"
+name = "high_quality_translation"
 version = "0.0.0"
 description = "Validates that the translation is of high quality."
 authors = [
-    {name = "Guardrails AI", email = "contact@guardrailsai.com"}
+    {name = "BrainLogic AI", email = "nicolas@brainlogic.ai"}
 ]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">= 3.8"
+requires-python = ">= 3.8.1"
 dependencies = [
-    "guardrails-ai>=0.3.2",
-    "guardrails-ai-unbabel-comet"
+    "guardrails-ai>=0.4.0",
+    "unbabel-comet"
 ]
 
 [project.optional-dependencies]
