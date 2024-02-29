@@ -1,90 +1,110 @@
-## Details
+## Overview
 
-| Developed by | BrainLogic AI |
+| Developed by | Guardrails AI |
 | --- | --- |
 | Date of development | Feb 15, 2024 |
-| Validator type | Quality |
+| Validator type | Format |
 | Blog | - |
 | License | Apache 2 |
 | Input/Output | Output |
 
 ## Description
 
-This validator enforces quality constraints to check if a translated text is of sufficiently good quality. This validator works on the outputs of an LLM when you’re using the LLM primarily for translation.
+This validator evaluates whether a translation is of high quality. It is useful for validating the output of language models that generate translations.
 
-Under the hood, this validator uses the open source `Unbabel/wmt22-cometkiwi-da` model to check for translation quality.
+## Requirements
+* Dependencies: `unbabel-comet`
+* **IMPORTANT**: Steps to follow ***before** installing the validator*:
+    - Please accept the gated model license from:
+        https://huggingface.co/Unbabel/wmt22-cometkiwi-da
+    - Get your Huggingface token from:
+        https://huggingface.co/settings/tokens
+        (Either create a new token or use an existing one)
+    - Download Huggingface CLI:
+        `pip install -U "huggingface_hub[cli]"`
+    - Login into Huggingface Hub using the token:
+        `huggingface-cli login --token $HUGGINGFACE_TOKEN`
 
-### Intended use
-
-- Primary intended uses: This validator is useful when you’re using an LLM to perform machine translation.
-- Out-of-scope use cases: N/A
-
-## Example Usage Guide
-
-### Installation
+## Installation
 
 ```bash
-$ gudardrails hub install is-high-quality-translation
+guardrails hub install hub://brainlogic/high_quality_translation
 ```
 
-### Initialization
+## Usage Examples
+
+### Validating string output via Python
+
+In this example, we use the `high_quality_translation` validator on any LLM generated text.
 
 ```python
-from guardrails.hub import IsHighQualityTranslation
+# Import Guard and Validator
+from guardrails.hub import HighQualityTranslation
+from guardrails import Guard
 
-# Create validator
-translation_validator = IsHighQualityTranslation(on_fail="noop")
+# Use the Guard with the validator
+guard = Guard().use(HighQualityTranslation, threshold=0.75, on_fail="exception")
 
-# Create Guard with Validator
+# Setup Guard
 guard = Guard.from_string(
-    validators=[translation_validator, ...],
-    num_reasks=2,
+    validators=[val],
 )
+
+# Test passing response
+guard.validate(
+    "The capital of France is Paris.",
+    metadata={
+        "translation_source": "Die Hauptstadt von Frankreich ist Paris."
+    }
+)
+
+try:
+    # Test failing response
+    guard.validate(
+        "France capital Paris is of The.",
+        metadata={
+            "translation_source": "Die Hauptstadt von Frankreich ist Paris."
+        }
+    )
+except Exception as e:
+    print(e)
 ```
 
-### Invocation
+## API Reference
 
-```python
-guard(
-    "Translated_text",
-    metadata={"translation_source": "Original text"}
-)
-```
+**`__init__(self, threshold=0.75, on_fail="noop")`**
+<ul>
 
-## API Ref
+Initializes a new instance of the Validator class.
 
-N/A
+**Parameters:**
 
-## Expected deployment metrics
+- **`threshold`** *(float):* The minimum score required for a translation to be considered high quality. The score is a float between 0 and 1, where 1 is the highest quality. The default is 0.75.
+- **`on_fail`** *(str, Callable):* The policy to enact when a validator fails. If `str`, must be one of `reask`, `fix`, `filter`, `refrain`, `noop`, `exception` or `fix_reask`. Otherwise, must be a function that is called when the validator fails.
 
-|  | CPU | GPU |
-| --- | --- | --- |
-| Latency |  | - |
-| Memory |  | - |
-| Cost |  | - |
-| Expected quality |  | - |
+</ul>
 
-## Resources required
+<br>
 
-- Dependencies:
-    - Install the `unbabel-comet` from source: `pip install git+https://github.com/Unbabel/COMET`
-    - Please accept the model license from: https://huggingface.co/Unbabel/wmt22-cometkiwi-da
-    - Login into Huggingface Hub using: huggingface-cli login --token $HUGGINGFACE_TOKEN
-- Foundation model access keys: Huggingface auth
-- Compute: Yes
+**`__call__(self, value, metadata={}) → ValidationResult`**
 
-## Validator Performance
+<ul>
 
-### Evaluation Dataset
+Validates the given `value` using the rules defined in this validator, relying on the `metadata` provided to customize the validation process. This method is automatically invoked by `guard.parse(...)`, ensuring the validation logic is applied to the input data.
 
-N/A
+Note:
 
-### Model Performance Measures
+1. This method should not be called directly by the user. Instead, invoke `guard.parse(...)` where this method will be called internally for each associated Validator.
+2. When invoking `guard.parse(...)`, ensure to pass the appropriate `metadata` dictionary that includes keys and values required by this validator. If `guard` is associated with multiple validators, combine all necessary metadata into a single dictionary.
 
-| Accuracy | - |
-| --- | --- |
-| F1 Score | - |
+**Parameters:**
 
-### Decision thresholds
+- **`value`** *(Any):* The input value to validate.
+- **`metadata`** *(dict):* A dictionary containing metadata required for validation. Keys and values must match the expectations of this validator.
+    
+    
+    | Key | Type | Description | Default |
+    | --- | --- | --- | --- |
+    | `translation_source` | `str` | The original source text that was translated. | None |
 
-0.5
+</ul>

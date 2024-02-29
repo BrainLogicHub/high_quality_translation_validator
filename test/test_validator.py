@@ -16,27 +16,23 @@ class ValidatorTestObject(BaseModel):
         (
             """
             {
-                "text": "Ich komme aus Bonn, Deutschland und ich bin 25 Jahre alt. Ich habe ein Hund."
+                "text": "The capital of France is Paris."
             }
             """,
-            {
-                "translation_source": "I am from Bonn, Germany and I am 25 years old. I have a dog."
-            },
+            {"translation_source": "Die Hauptstadt von Frankreich ist Paris."},
         ),
         (
             """
             {
-                "text": "The cat slept soundly under the warm afternoon sun, oblivious to the hustle and bustle of the city. Meanwhile, the leaves of the trees danced to the rhythm of the wind, painting a picture of peace and serenity."
+                "text": "¿Tienes una hamburguesa vegetariana con queso?"
             }
             """,
-            {
-                "translation_source": "El gato dormía plácidamente bajo el cálido sol de la tarde, ajeno al bullicio de la ciudad. Mientras tanto, las hojas de los árboles danzaban al ritmo del viento, pintando un cuadro de paz y serenidad."
-            },
+            {"translation_source": "Do you have a vegetarian burger with cheese?"},
         ),
     ],
 )
 def test_happy_path(value, metadata):
-    # Create a guard from the pydantic model
+    """Test happy path."""
     guard = Guard.from_pydantic(output_class=ValidatorTestObject)
     response = guard.parse(value, metadata=metadata)
     print("Happy path response", response)
@@ -50,27 +46,27 @@ def test_happy_path(value, metadata):
         (
             """
             {
-                "text": "Ich komme aus Bonn, Deutschland und ich bin 25 Jahre alt. Ich habe ein Hund."
+                "text": "France capital Paris is of The."
             }
             """,
-            {"translation_source": "I is Bonn but was 25 years. You is dog."},
+            {"translation_source": "Die Hauptstadt von Frankreich ist Paris."},
         ),
         (
             """
             {
-                "text": "Dog is sleeping under sun."
+                "text": "Hatten Sir eines vegetarische Burger ohne Käse?"
             }
             """,
-            {
-                "translation_source": "El gato dormía plácidamente bajo el cálido sol de la tarde, ajeno al bullicio de la ciudad. Mientras tanto, las hojas de los árboles danzaban al ritmo del viento, pintando un cuadro de paz y serenidad."
-            },
+            {"translation_source": "Do you have a vegetarian burger with cheese?"},
         ),
     ],
 )
 def test_fail_path(value, metadata):
-    # Create a guard from the pydantic model
+    """Test fail path."""
     guard = Guard.from_pydantic(output_class=ValidatorTestObject)
-
     with pytest.raises(Exception):
-        response = guard.parse(value, metadata=metadata)
+        response = guard.parse(
+            value,
+            metadata=metadata,
+        )
         print("Fail path response", response)
