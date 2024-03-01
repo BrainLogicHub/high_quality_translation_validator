@@ -42,32 +42,28 @@ In this example, we use the `high_quality_translation` validator on any LLM gene
 from guardrails.hub import HighQualityTranslation
 from guardrails import Guard
 
-# Use the Guard with the validator
-guard = Guard().use(HighQualityTranslation, threshold=0.75, on_fail="exception")
+if __name__ == "__main__":
+    # Use the Guard with the validator
+    guard = Guard().use(HighQualityTranslation, threshold=0.75, on_fail="exception")
 
-# Setup Guard
-guard = Guard.from_string(
-    validators=[val],
-)
-
-# Test passing response
-guard.validate(
-    "The capital of France is Paris.",
-    metadata={
-        "translation_source": "Die Hauptstadt von Frankreich ist Paris."
-    }
-)
-
-try:
-    # Test failing response
+    # Test passing response
     guard.validate(
-        "France capital Paris is of The.",
-        metadata={
-            "translation_source": "Die Hauptstadt von Frankreich ist Paris."
-        }
+        "The capital of France is Paris.",
+        metadata={"translation_source": "Die Hauptstadt von Frankreich ist Paris."},
     )
-except Exception as e:
-    print(e)
+
+    try:
+        # Test failing response
+        guard.validate(
+            "France capital Paris is of The.",
+            metadata={"translation_source": "Die Hauptstadt von Frankreich ist Paris."},
+        )
+    except Exception as e:
+        print(e)
+```
+Output:
+```console
+Validation failed for field with errors: France capital Paris is of The. is a low quality translation. 
 ```
 
 ## API Reference
