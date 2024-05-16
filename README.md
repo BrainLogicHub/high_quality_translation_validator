@@ -15,7 +15,7 @@ This validator evaluates whether a translation is of high quality. It is useful 
 ### Requirements
 
 * Dependencies: 
-    - `unbabel-comet`
+    - unbabel-comet
 
 * **IMPORTANT**: Steps to follow ***before** installing the validator*:
     - Please accept the gated model license from:
@@ -90,12 +90,12 @@ Note:
 1. This method should not be called directly by the user. Instead, invoke `guard.parse(...)` where this method will be called internally for each associated Validator.
 2. When invoking `guard.parse(...)`, ensure to pass the appropriate `metadata` dictionary that includes keys and values required by this validator. If `guard` is associated with multiple validators, combine all necessary metadata into a single dictionary.
 
-**Parameters:**
+**Parameters**
 - **`value`** *(Any):* The input value to validate.
 - **`metadata`** *(dict):* A dictionary containing metadata required for validation. Keys and values must match the expectations of this validator.
     
     
     | Key | Type | Description | Default |
     | --- | --- | --- | --- |
-    | `translation_source` | `str` | The original source text that was translated. | None |
+    | translation_source | String | The original source text that was translated. | N/A |
 </ul>
