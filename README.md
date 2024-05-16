@@ -1,19 +1,22 @@
-## Overview
+# Overview
 
 | Developed by | Guardrails AI |
-| --- | --- |
 | Date of development | Feb 15, 2024 |
 | Validator type | Format |
-| Blog | - |
+| Blog |  |
 | License | Apache 2 |
 | Input/Output | Output |
 
 ## Description
 
+### Intended Use
 This validator evaluates whether a translation is of high quality. It is useful for validating the output of language models that generate translations.
 
-## Requirements
-* Dependencies: `unbabel-comet`
+### Requirements
+
+* Dependencies: 
+    - `unbabel-comet`
+
 * **IMPORTANT**: Steps to follow ***before** installing the validator*:
     - Please accept the gated model license from:
         https://huggingface.co/Unbabel/wmt22-cometkiwi-da
@@ -28,7 +31,7 @@ This validator evaluates whether a translation is of high quality. It is useful 
 ## Installation
 
 ```bash
-guardrails hub install hub://brainlogic/high_quality_translation
+$ guardrails hub install hub://brainlogic/high_quality_translation
 ```
 
 ## Usage Examples
@@ -42,8 +45,8 @@ In this example, we use the `high_quality_translation` validator on any LLM gene
 from guardrails.hub import HighQualityTranslation
 from guardrails import Guard
 
+# Use the Guard with the validator
 if __name__ == "__main__":
-    # Use the Guard with the validator
     guard = Guard().use(HighQualityTranslation, threshold=0.75, on_fail="exception")
 
     # Test passing response
@@ -66,26 +69,20 @@ Output:
 Validation failed for field with errors: France capital Paris is of The. is a low quality translation. 
 ```
 
-## API Reference
+# API Reference
 
 **`__init__(self, threshold=0.75, on_fail="noop")`**
 <ul>
-
 Initializes a new instance of the Validator class.
 
 **Parameters:**
-
 - **`threshold`** *(float):* The minimum score required for a translation to be considered high quality. The score is a float between 0 and 1, where 1 is the highest quality. The default is 0.75.
 - **`on_fail`** *(str, Callable):* The policy to enact when a validator fails. If `str`, must be one of `reask`, `fix`, `filter`, `refrain`, `noop`, `exception` or `fix_reask`. Otherwise, must be a function that is called when the validator fails.
-
 </ul>
-
-<br>
+<br/>
 
 **`__call__(self, value, metadata={}) → ValidationResult`**
-
 <ul>
-
 Validates the given `value` using the rules defined in this validator, relying on the `metadata` provided to customize the validation process. This method is automatically invoked by `guard.parse(...)`, ensuring the validation logic is applied to the input data.
 
 Note:
@@ -94,7 +91,6 @@ Note:
 2. When invoking `guard.parse(...)`, ensure to pass the appropriate `metadata` dictionary that includes keys and values required by this validator. If `guard` is associated with multiple validators, combine all necessary metadata into a single dictionary.
 
 **Parameters:**
-
 - **`value`** *(Any):* The input value to validate.
 - **`metadata`** *(dict):* A dictionary containing metadata required for validation. Keys and values must match the expectations of this validator.
     
@@ -102,5 +98,4 @@ Note:
     | Key | Type | Description | Default |
     | --- | --- | --- | --- |
     | `translation_source` | `str` | The original source text that was translated. | None |
-
 </ul>
